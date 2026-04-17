@@ -38,7 +38,7 @@ Use o conteudo de:
 
 Esse script cria:
 
-- tabela `public.app_state`
+- tabelas `public.app_settings`, `public.app_users`, `public.app_pending_users`, `public.app_rejected_users`, `public.app_bebidas`, `public.app_lotes`
 - RLS habilitado
 - policies anon/auth compativeis com o app atual (sem Supabase Auth)
 

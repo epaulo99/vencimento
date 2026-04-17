@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persistData, hydrateStorage } from '../utils/storage';
-import { fetchRemoteState, upsertRemoteState } from '../utils/supabaseState';
+import { fetchRemoteState, fetchRemoteStateResult, upsertRemoteState } from '../utils/supabaseState';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
 import { DEFAULT_USERS, PROTECTED_ADMIN_EMAIL } from '../constants/appData';
 
@@ -15,6 +15,7 @@ const hydrated = hydrateStorage();
 
 const normalizeUsername = (value) => String(value ?? '').trim().toLowerCase();
 const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
+const nowIso = () => new Date().toISOString();
 
 const getPersistableSlice = (state) => ({
   users: state.users,
@@ -42,9 +43,9 @@ export const useAppStore = create((set, get) => ({
       return;
     }
 
-    const remote = await fetchRemoteState();
-
-    if (remote) {
+    const remoteResult = await fetchRemoteStateResult();
+    if (remoteResult?.ok && remoteResult.exists && remoteResult.state) {
+      const remote = remoteResult.state;
       const localCurrentUser = get().currentUser;
       set({
         users: remote.users,
@@ -61,7 +62,11 @@ export const useAppStore = create((set, get) => ({
       return;
     }
 
-    await upsertRemoteState(getPersistableSlice(get()));
+    // Seed remote only when it is truly missing.
+    if (remoteResult?.ok && !remoteResult.exists) {
+      await upsertRemoteState(getPersistableSlice(get()));
+    }
+
     set({ remoteBootstrapped: true });
   },
 
@@ -127,7 +132,8 @@ export const useAppStore = create((set, get) => ({
                 ? {
                     ...item,
                     email: authUser.email ?? byName.email ?? '',
-                    authUserId: authUser.id
+                    authUserId: authUser.id,
+                    updatedAt: nowIso()
                   }
                 : item
             );
@@ -253,7 +259,8 @@ export const useAppStore = create((set, get) => ({
         username: username.trim(),
         email: normalizedEmail,
         authUserId,
-        requestedAt: new Date().toISOString()
+        requestedAt: nowIso(),
+        updatedAt: nowIso()
       },
       ...get().pendingUsers
     ];
@@ -273,7 +280,8 @@ export const useAppStore = create((set, get) => ({
         username: request.username,
         email: request.email ?? '',
         authUserId: request.authUserId ?? null,
-        role
+        role,
+        updatedAt: nowIso()
       },
       ...get().users
     ];
@@ -294,7 +302,8 @@ export const useAppStore = create((set, get) => ({
     const rejectedUsers = [
       {
         ...request,
-        rejectedAt: new Date().toISOString()
+        rejectedAt: nowIso(),
+        updatedAt: nowIso()
       },
       ...get().rejectedUsers.filter(
         (item) => item.username.toLowerCase() !== request.username.toLowerCase()
@@ -314,7 +323,8 @@ export const useAppStore = create((set, get) => ({
         username: request.username,
         email: request.email ?? '',
         authUserId: request.authUserId ?? null,
-        role
+        role,
+        updatedAt: nowIso()
       },
       ...get().users
     ];
@@ -364,9 +374,10 @@ export const useAppStore = create((set, get) => ({
         username: target.username,
         email: target.email ?? '',
         authUserId: target.authUserId ?? null,
-        requestedAt: new Date().toISOString(),
-        rejectedAt: new Date().toISOString(),
-        previousRole: target.role
+        requestedAt: nowIso(),
+        rejectedAt: nowIso(),
+        previousRole: target.role,
+        updatedAt: nowIso()
       },
       ...get().rejectedUsers.filter(
         (item) => item.username.toLowerCase() !== target.username.toLowerCase()
@@ -400,7 +411,9 @@ export const useAppStore = create((set, get) => ({
       return { ok: false, message: 'Nao e possivel remover o ultimo admin.' };
     }
 
-    const users = get().users.map((item) => (item.id === userId ? { ...item, role } : item));
+    const users = get().users.map((item) =>
+      item.id === userId ? { ...item, role, updatedAt: nowIso() } : item
+    );
 
     const nextCurrentUser =
       currentUser && currentUser.id === userId ? { ...currentUser, role } : currentUser;
@@ -429,7 +442,8 @@ export const useAppStore = create((set, get) => ({
       id: makeId(),
       nome,
       categoria,
-      imagem
+      imagem,
+      updatedAt: nowIso()
     };
 
     const bebidas = [bebida, ...get().bebidas];
@@ -453,7 +467,8 @@ export const useAppStore = create((set, get) => ({
             ...item,
             nome: nome.trim(),
             categoria: categoria.trim(),
-            imagem: imagem.trim()
+            imagem: imagem.trim(),
+            updatedAt: nowIso()
           }
         : item
     );
@@ -490,7 +505,8 @@ export const useAppStore = create((set, get) => ({
       bar,
       quantidade,
       quantidadeRestante: quantidade,
-      validade
+      validade,
+      updatedAt: nowIso()
     };
 
     const lotes = [lote, ...get().lotes];
@@ -504,7 +520,7 @@ export const useAppStore = create((set, get) => ({
       .map((lote) => {
         if (lote.id !== loteId) return lote;
         const quantidadeRestante = Math.max(0, lote.quantidadeRestante - quantidadeVendida);
-        return { ...lote, quantidadeRestante };
+        return { ...lote, quantidadeRestante, updatedAt: nowIso() };
       })
       .filter((lote) => lote.quantidadeRestante > 0);
 
