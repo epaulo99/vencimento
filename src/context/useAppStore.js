@@ -12,6 +12,7 @@ const makeId = () => {
 };
 
 const hydrated = hydrateStorage();
+const PROTECTED_ADMIN_EMAIL = 'eliabe.paulo99@gmail.com';
 
 const normalizeUsername = (value) => String(value ?? '').trim().toLowerCase();
 const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
@@ -343,6 +344,11 @@ export const useAppStore = create((set, get) => ({
     const currentUser = get().currentUser;
     if (currentUser?.id === userId) {
       return { ok: false, message: 'Voce nao pode recusar seu proprio usuario.' };
+    }
+
+    const isProtectedAdmin = normalizeEmail(target.email) === normalizeEmail(PROTECTED_ADMIN_EMAIL);
+    if (isProtectedAdmin) {
+      return { ok: false, message: 'Esse admin e protegido e nao pode ser recusado por outros usuarios.' };
     }
 
     const adminCount = get().users.filter((item) => item.role === 'admin').length;
