@@ -17,7 +17,7 @@ function BeveragePicker({ bebidas, selectedId, onSelect }) {
             <img
               src={bebida.imagem}
               alt={bebida.nome}
-              className="h-20 w-full rounded-xl object-cover"
+              className="h-20 w-full rounded-xl bg-white object-contain"
               loading="lazy"
             />
             <p className="mt-2 text-sm font-semibold text-slate-900">{bebida.nome}</p>
