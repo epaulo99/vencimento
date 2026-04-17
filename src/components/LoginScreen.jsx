@@ -2,13 +2,13 @@ import { useState } from 'react';
 
 function LoginScreen({ onLogin, onRequestAccess }) {
   const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ username: '', password: '' });
+  const [form, setForm] = useState({ username: '', email: '', password: '' });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  const submitLogin = (event) => {
+  const submitLogin = async (event) => {
     event.preventDefault();
-    const result = onLogin(form);
+    const result = await onLogin(form);
     if (!result.ok) {
       setError(result.message);
       setSuccess('');
@@ -18,9 +18,9 @@ function LoginScreen({ onLogin, onRequestAccess }) {
     setSuccess('');
   };
 
-  const submitRequest = (event) => {
+  const submitRequest = async (event) => {
     event.preventDefault();
-    const result = onRequestAccess(form);
+    const result = await onRequestAccess(form);
     if (!result.ok) {
       setError(result.message);
       setSuccess('');
@@ -28,7 +28,7 @@ function LoginScreen({ onLogin, onRequestAccess }) {
     }
     setError('');
     setSuccess(result.message);
-    setForm({ username: '', password: '' });
+    setForm({ username: '', email: '', password: '' });
   };
 
   return (
@@ -68,14 +68,28 @@ function LoginScreen({ onLogin, onRequestAccess }) {
         </div>
 
         <form onSubmit={mode === 'login' ? submitLogin : submitRequest} className="space-y-4">
+          {mode === 'request' && (
+            <label className="block space-y-2 text-sm font-semibold text-slate-700">
+              Usuario
+              <input
+                required
+                value={form.username}
+                onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
+                className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3"
+                placeholder="Escolha seu usuario"
+              />
+            </label>
+          )}
+
           <label className="block space-y-2 text-sm font-semibold text-slate-700">
-            Usuario
+            Email
             <input
               required
-              value={form.username}
-              onChange={(event) => setForm((prev) => ({ ...prev, username: event.target.value }))}
+              type="email"
+              value={form.email}
+              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
               className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3"
-              placeholder="Digite seu usuario"
+              placeholder="Digite seu email"
             />
           </label>
 

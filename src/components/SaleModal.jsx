@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function SaleModal({ item, onClose, onConfirm }) {
   const [qty, setQty] = useState(1);
@@ -6,6 +6,11 @@ function SaleModal({ item, onClose, onConfirm }) {
   if (!item) return null;
 
   const max = item.quantidadeRestante;
+  const safeQty = Math.min(max, Math.max(1, Number(qty) || 1));
+
+  useEffect(() => {
+    setQty(1);
+  }, [item.id, max]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
@@ -20,8 +25,11 @@ function SaleModal({ item, onClose, onConfirm }) {
             type="number"
             min="1"
             max={max}
-            value={qty}
-            onChange={(event) => setQty(Number(event.target.value))}
+            value={safeQty}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              setQty(Math.min(max, Math.max(1, Number.isFinite(next) ? next : 1)));
+            }}
             className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-xl font-black"
           />
         </label>
@@ -31,7 +39,7 @@ function SaleModal({ item, onClose, onConfirm }) {
             Cancelar
           </button>
           <button
-            onClick={() => onConfirm(item.id, Math.min(max, Math.max(1, Number(qty) || 1)))}
+            onClick={() => onConfirm(item.id, safeQty)}
             className="rounded-2xl bg-emerald-500 px-4 py-3 font-black text-slate-900"
           >
             Confirmar

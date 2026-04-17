@@ -11,8 +11,8 @@ export const STORAGE_KEYS = {
 };
 
 export const DEFAULT_USERS = [
-  { id: 'u-admin', username: 'EliabeP', password: '154578', role: 'admin' },
-  { id: 'u-barman', username: 'barman', password: 'bar123', role: 'barman' }
+  { id: 'u-admin', username: 'EliabeP', email: 'admin@validade.local', password: '154578', role: 'admin' },
+  { id: 'u-barman', username: 'barman', email: 'barman@validade.local', password: 'bar123', role: 'barman' }
 ];
 
 export const DEFAULT_BEBIDAS = [

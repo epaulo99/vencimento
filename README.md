@@ -52,7 +52,7 @@ Esse script remove policies anonimas e deixa acesso apenas para `authenticated`.
 
 ## Funcionalidades
 
-- Login com persistencia
+- Login com email e senha (Supabase Auth)
 - Solicitacao/aprovacao/recusa de usuarios
 - Alteracao de perfil de usuario (admin/barman)
 - Mover aprovados para recusados
