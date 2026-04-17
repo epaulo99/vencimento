@@ -3,14 +3,15 @@ import { useEffect, useState } from 'react';
 function SaleModal({ item, onClose, onConfirm }) {
   const [qty, setQty] = useState(1);
 
+  useEffect(() => {
+    if (!item) return;
+    setQty(1);
+  }, [item?.id, item?.quantidadeRestante]);
+
   if (!item) return null;
 
   const max = item.quantidadeRestante;
   const safeQty = Math.min(max, Math.max(1, Number(qty) || 1));
-
-  useEffect(() => {
-    setQty(1);
-  }, [item.id, max]);
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
