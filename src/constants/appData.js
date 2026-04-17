@@ -10,6 +10,8 @@ export const STORAGE_KEYS = {
   currentUser: 'currentUser'
 };
 
+export const PROTECTED_ADMIN_EMAIL = 'eliabe.paulo99@gmail.com';
+
 export const DEFAULT_USERS = [
   { id: 'u-admin', username: 'EliabeP', email: 'admin@validade.local', password: '154578', role: 'admin' },
   { id: 'u-barman', username: 'barman', email: 'barman@validade.local', password: 'bar123', role: 'barman' }

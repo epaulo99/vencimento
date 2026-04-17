@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persistData, hydrateStorage } from '../utils/storage';
 import { fetchRemoteState, upsertRemoteState } from '../utils/supabaseState';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
-import { DEFAULT_USERS } from '../constants/appData';
+import { DEFAULT_USERS, PROTECTED_ADMIN_EMAIL } from '../constants/appData';
 
 const makeId = () => {
   if (typeof crypto !== 'undefined' && crypto.randomUUID) {
@@ -12,7 +12,6 @@ const makeId = () => {
 };
 
 const hydrated = hydrateStorage();
-const PROTECTED_ADMIN_EMAIL = 'eliabe.paulo99@gmail.com';
 
 const normalizeUsername = (value) => String(value ?? '').trim().toLowerCase();
 const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
@@ -46,6 +45,7 @@ export const useAppStore = create((set, get) => ({
     const remote = await fetchRemoteState();
 
     if (remote) {
+      const localCurrentUser = get().currentUser;
       set({
         users: remote.users,
         pendingUsers: remote.pendingUsers,
@@ -53,10 +53,11 @@ export const useAppStore = create((set, get) => ({
         theme: remote.theme,
         bebidas: remote.bebidas,
         lotes: remote.lotes,
-        currentUser: remote.currentUser,
+        // Keep an existing local login if remote state does not carry one.
+        currentUser: remote.currentUser ?? localCurrentUser,
         remoteBootstrapped: true
       });
-      persistData(remote);
+      persistData({ ...remote, currentUser: remote.currentUser ?? localCurrentUser });
       return;
     }
 
@@ -387,6 +388,13 @@ export const useAppStore = create((set, get) => ({
       return { ok: false, message: 'Usuario nao encontrado.' };
     }
 
+    const currentUser = get().currentUser;
+    const isProtectedAdmin = normalizeEmail(target.email) === normalizeEmail(PROTECTED_ADMIN_EMAIL);
+    const isActorProtectedAdmin = normalizeEmail(currentUser?.email) === normalizeEmail(PROTECTED_ADMIN_EMAIL);
+    if (isProtectedAdmin && !isActorProtectedAdmin) {
+      return { ok: false, message: 'Esse admin e protegido e nao pode ter perfil alterado por outros usuarios.' };
+    }
+
     const adminCount = get().users.filter((item) => item.role === 'admin').length;
     if (target.role === 'admin' && role === 'barman' && adminCount <= 1) {
       return { ok: false, message: 'Nao e possivel remover o ultimo admin.' };
@@ -394,7 +402,6 @@ export const useAppStore = create((set, get) => ({
 
     const users = get().users.map((item) => (item.id === userId ? { ...item, role } : item));
 
-    const currentUser = get().currentUser;
     const nextCurrentUser =
       currentUser && currentUser.id === userId ? { ...currentUser, role } : currentUser;
 

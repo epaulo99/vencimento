@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { PROTECTED_ADMIN_EMAIL } from '../constants/appData';
 
 const FALLBACK_IMAGE =
   'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 400 300%22%3E%3Crect width=%22400%22 height=%22300%22 fill=%22%230f172a%22/%3E%3Ctext x=%2250%25%22 y=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2230%22 fill=%22%2394a3b8%22 font-family=%22Arial%22%3ESem imagem%3C/text%3E%3C/svg%3E';
@@ -55,6 +56,8 @@ const formatRequestDate = (value) => {
   if (Number.isNaN(date.getTime())) return '-';
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(date);
 };
+
+const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
 
 function SettingsScreen({
   currentUser,
@@ -160,6 +163,11 @@ function SettingsScreen({
   };
 
   const isAdmin = currentUser.role === 'admin';
+  const isCurrentProtectedAdmin = normalizeEmail(currentUser.email) === normalizeEmail(PROTECTED_ADMIN_EMAIL);
+  const visibleApprovedUsers = users.filter((user) => {
+    const isProtected = normalizeEmail(user.email) === normalizeEmail(PROTECTED_ADMIN_EMAIL);
+    return isCurrentProtectedAdmin || !isProtected;
+  });
 
   const handleRoleChange = (userId, role) => {
     const result = onUpdateUserRole({ userId, role });
@@ -242,7 +250,7 @@ function SettingsScreen({
             <div className="flex items-center justify-between">
               <h2 className="text-lg font-bold text-slate-900">Usuarios aprovados</h2>
               <span className="rounded-full bg-emerald-100 px-2 py-1 text-xs font-bold text-emerald-700">
-                {users.length}
+                {visibleApprovedUsers.length}
               </span>
             </div>
 
@@ -251,7 +259,7 @@ function SettingsScreen({
             )}
 
             <div className="space-y-2">
-              {users.map((user) => (
+              {visibleApprovedUsers.map((user) => (
                 <article key={user.id} className="rounded-2xl border border-slate-200 bg-slate-100/90 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
