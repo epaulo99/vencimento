@@ -16,11 +16,6 @@ npm run build
 npm run preview
 ```
 
-## Credenciais de teste
-
-- admin: `EliabeP / 154578`
-- barman: `barman / bar123`
-
 ## Integracao Supabase
 
 A aplicacao continua funcionando com LocalStorage normalmente.
