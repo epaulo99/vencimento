@@ -58,6 +58,12 @@ function App() {
   }, [theme]);
 
   useEffect(() => {
+    if (currentUser) {
+      setTab('dashboard');
+    }
+  }, [currentUser]);
+
+  useEffect(() => {
     void bootstrapFromSupabase();
   }, [bootstrapFromSupabase]);
 
