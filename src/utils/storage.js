@@ -27,11 +27,11 @@ const readSnapshot = (storage) => ({
   rejectedUsers: safeJSON(storage.getItem(STORAGE_KEYS.rejectedUsers), []) ?? [],
   theme: storage.getItem(STORAGE_KEYS.theme) === 'dark' ? 'dark' : 'light',
   bebidas: safeJSON(storage.getItem(STORAGE_KEYS.bebidas), DEFAULT_BEBIDAS) ?? DEFAULT_BEBIDAS,
-  lotes: safeJSON(storage.getItem(STORAGE_KEYS.lotes), []) ?? [],
-  currentUser: safeJSON(storage.getItem(STORAGE_KEYS.currentUser), null)
+  lotes: safeJSON(storage.getItem(STORAGE_KEYS.lotes), []) ?? []
 });
 
 const syncRemote = (storage) => {
+  // The logged user is device-local state and must never be shared remotely.
   const snapshot = readSnapshot(storage);
   void upsertRemoteState(snapshot);
 };
@@ -97,16 +97,16 @@ export const persistData = ({ users, pendingUsers, rejectedUsers, theme, bebidas
   const storage = getStorage();
   if (!storage) return;
 
-  if (users) storage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
-  if (pendingUsers) storage.setItem(STORAGE_KEYS.pendingUsers, JSON.stringify(pendingUsers));
-  if (rejectedUsers) storage.setItem(STORAGE_KEYS.rejectedUsers, JSON.stringify(rejectedUsers));
-  if (theme) storage.setItem(STORAGE_KEYS.theme, theme);
-  if (bebidas) storage.setItem(STORAGE_KEYS.bebidas, JSON.stringify(bebidas));
-  if (lotes) storage.setItem(STORAGE_KEYS.lotes, JSON.stringify(lotes));
+  if (users !== undefined) storage.setItem(STORAGE_KEYS.users, JSON.stringify(users));
+  if (pendingUsers !== undefined) storage.setItem(STORAGE_KEYS.pendingUsers, JSON.stringify(pendingUsers));
+  if (rejectedUsers !== undefined) storage.setItem(STORAGE_KEYS.rejectedUsers, JSON.stringify(rejectedUsers));
+  if (theme !== undefined) storage.setItem(STORAGE_KEYS.theme, theme);
+  if (bebidas !== undefined) storage.setItem(STORAGE_KEYS.bebidas, JSON.stringify(bebidas));
+  if (lotes !== undefined) storage.setItem(STORAGE_KEYS.lotes, JSON.stringify(lotes));
 
-  if (currentUser) {
+  if (currentUser !== undefined && currentUser !== null) {
     storage.setItem(STORAGE_KEYS.currentUser, JSON.stringify(currentUser));
-  } else {
+  } else if (currentUser === null) {
     storage.removeItem(STORAGE_KEYS.currentUser);
   }
 

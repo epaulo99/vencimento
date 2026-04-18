@@ -16,6 +16,29 @@ const hydrated = hydrateStorage();
 const normalizeUsername = (value) => String(value ?? '').trim().toLowerCase();
 const normalizeEmail = (value) => String(value ?? '').trim().toLowerCase();
 const nowIso = () => new Date().toISOString();
+const toSafeUser = (user, fallbackEmail = '') => ({
+  id: user.id,
+  username: user.username,
+  email: user.email ?? fallbackEmail ?? '',
+  role: user.role
+});
+
+const resolveApprovedUserByAuthIdentity = (users, authUser) => {
+  if (!authUser) return null;
+
+  const authEmail = normalizeEmail(authUser.email);
+  const metadataUsername = normalizeUsername(authUser.user_metadata?.username);
+
+  return (
+    users.find(
+      (item) =>
+        normalizeEmail(item.email) === authEmail ||
+        (item.authUserId && item.authUserId === authUser.id)
+    ) ??
+    users.find((item) => metadataUsername && normalizeUsername(item.username) === metadataUsername) ??
+    null
+  );
+};
 
 const getPersistableSlice = (state) => ({
   users: state.users,
@@ -23,8 +46,7 @@ const getPersistableSlice = (state) => ({
   rejectedUsers: state.rejectedUsers,
   theme: state.theme,
   bebidas: state.bebidas,
-  lotes: state.lotes,
-  currentUser: state.currentUser
+  lotes: state.lotes
 });
 
 export const useAppStore = create((set, get) => ({
@@ -46,7 +68,23 @@ export const useAppStore = create((set, get) => ({
     const remoteResult = await fetchRemoteStateResult();
     if (remoteResult?.ok && remoteResult.exists && remoteResult.state) {
       const remote = remoteResult.state;
-      const localCurrentUser = get().currentUser;
+      let nextCurrentUser = null;
+
+      if (supabase) {
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+        const authUser = session?.user ?? null;
+        const approvedUser = resolveApprovedUserByAuthIdentity(remote.users ?? [], authUser);
+
+        if (authUser && approvedUser) {
+          nextCurrentUser = toSafeUser(approvedUser, authUser.email);
+        } else if (authUser && !approvedUser) {
+          // A valid auth session without approval must not inherit local privileges.
+          await supabase.auth.signOut();
+        }
+      }
+
       set({
         users: remote.users,
         pendingUsers: remote.pendingUsers,
@@ -54,16 +92,27 @@ export const useAppStore = create((set, get) => ({
         theme: remote.theme,
         bebidas: remote.bebidas,
         lotes: remote.lotes,
-        // Keep an existing local login if remote state does not carry one.
-        currentUser: remote.currentUser ?? localCurrentUser,
+        currentUser: nextCurrentUser,
         remoteBootstrapped: true
       });
-      persistData({ ...remote, currentUser: remote.currentUser ?? localCurrentUser });
+      persistData({ ...remote, currentUser: nextCurrentUser });
       return;
     }
 
     // Seed remote only when it is truly missing.
     if (remoteResult?.ok && !remoteResult.exists) {
+      if (supabase) {
+        const {
+          data: { session }
+        } = await supabase.auth.getSession();
+
+        if (session?.user) {
+          await supabase.auth.signOut();
+          set({ currentUser: null });
+          persistData({ currentUser: null });
+        }
+      }
+
       await upsertRemoteState(getPersistableSlice(get()));
     }
 
@@ -92,11 +141,7 @@ export const useAppStore = create((set, get) => ({
 
       const authUser = data.user;
       let users = get().users;
-      let user = users.find(
-        (item) =>
-          normalizeEmail(item.email) === normalizeEmail(authUser.email) ||
-          (item.authUserId && item.authUserId === authUser.id)
-      );
+      let user = resolveApprovedUserByAuthIdentity(users, authUser);
 
       // Force a remote refresh after auth to avoid stale local data causing false "not approved" errors.
       if (!user) {
@@ -108,39 +153,36 @@ export const useAppStore = create((set, get) => ({
             rejectedUsers: remote.rejectedUsers,
             theme: remote.theme,
             bebidas: remote.bebidas,
-            lotes: remote.lotes,
-            currentUser: remote.currentUser
+            lotes: remote.lotes
           });
           persistData(remote);
           users = remote.users ?? [];
-          user = users.find(
-            (item) =>
-              normalizeEmail(item.email) === normalizeEmail(authUser.email) ||
-              (item.authUserId && item.authUserId === authUser.id)
-          );
+          user = resolveApprovedUserByAuthIdentity(users, authUser);
         }
       }
 
       // Backward compatibility: link old user rows that only had username.
       if (!user) {
-        const metadataUsername = normalizeUsername(authUser.user_metadata?.username);
-        if (metadataUsername) {
-          const byName = users.find((item) => normalizeUsername(item.username) === metadataUsername);
-          if (byName) {
-            users = users.map((item) =>
-              item.id === byName.id
-                ? {
-                    ...item,
-                    email: authUser.email ?? byName.email ?? '',
-                    authUserId: authUser.id,
-                    updatedAt: nowIso()
-                  }
-                : item
-            );
-            set({ users });
-            persistData({ users });
-            user = users.find((item) => item.id === byName.id);
-          }
+        const byName = resolveApprovedUserByAuthIdentity(users, {
+          ...authUser,
+          email: '',
+          user_metadata: { ...authUser.user_metadata, username: authUser.user_metadata?.username }
+        });
+
+        if (byName) {
+          users = users.map((item) =>
+            item.id === byName.id
+              ? {
+                  ...item,
+                  email: authUser.email ?? byName.email ?? '',
+                  authUserId: authUser.id,
+                  updatedAt: nowIso()
+                }
+              : item
+          );
+          set({ users });
+          persistData({ users });
+          user = users.find((item) => item.id === byName.id);
         }
       }
 
@@ -149,12 +191,7 @@ export const useAppStore = create((set, get) => ({
         return { ok: false, message: 'Conta autenticada, mas sem aprovacao do admin.' };
       }
 
-      const safeUser = {
-        id: user.id,
-        username: user.username,
-        email: user.email ?? authUser.email ?? '',
-        role: user.role
-      };
+      const safeUser = toSafeUser(user, authUser.email);
       set({ currentUser: safeUser });
       persistData({ currentUser: safeUser });
       return { ok: true };
@@ -190,7 +227,7 @@ export const useAppStore = create((set, get) => ({
       return { ok: false, message: 'Credenciais invalidas.' };
     }
 
-    const safeUser = { id: user.id, username: user.username, email: user.email ?? '', role: user.role };
+    const safeUser = toSafeUser(user);
     set({ currentUser: safeUser });
     persistData({ currentUser: safeUser });
     return { ok: true };

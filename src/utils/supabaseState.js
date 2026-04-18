@@ -44,7 +44,6 @@ const fetchSettings = async () => {
 
   return {
     theme: data?.theme === 'dark' ? 'dark' : 'light',
-    currentUser: data?.current_user_data ?? null,
     exists: Boolean(data)
   };
 };
@@ -64,8 +63,7 @@ const fetchLegacyState = async () => {
     rejectedUsers: data.rejected_users ?? [],
     theme: data.theme === 'dark' ? 'dark' : 'light',
     bebidas: data.bebidas ?? [],
-    lotes: data.lotes ?? [],
-    currentUser: data.current_user_data ?? null
+    lotes: data.lotes ?? []
   };
 };
 
@@ -103,12 +101,13 @@ const syncCollection = async (table, items) => {
   }
 };
 
-const saveSettings = async ({ theme, currentUser }) => {
+const saveSettings = async ({ theme }) => {
   const { error } = await supabase.from('app_settings').upsert(
     {
       id: SETTINGS_ID,
       theme: theme === 'dark' ? 'dark' : 'light',
-      current_user_data: currentUser ?? null,
+      // Session must stay local to the browser/device.
+      current_user_data: null,
       updated_at: new Date().toISOString()
     },
     { onConflict: 'id' }
@@ -157,8 +156,7 @@ export const fetchRemoteStateResult = async () => {
         rejectedUsers,
         bebidas,
         lotes,
-        theme: settings.theme,
-        currentUser: settings.currentUser
+        theme: settings.theme
       },
       error: null
     };
@@ -183,8 +181,7 @@ export const upsertRemoteState = async (state) => {
     }
 
     await saveSettings({
-      theme: state?.theme ?? 'light',
-      currentUser: state?.currentUser ?? null
+      theme: state?.theme ?? 'light'
     });
   } catch (error) {
     console.error(String(error));
