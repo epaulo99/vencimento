@@ -40,10 +40,9 @@ const playBeep = () => {
   }
 };
 
-function CriticalAlertModal({ items, onConfirm, onOpenSale }) {
+function CriticalAlertModal({ items, onOpenSale }) {
   const [activeIndex, setActiveIndex] = useState(0);
   const [blink, setBlink] = useState(true);
-  const [soldQty, setSoldQty] = useState(1);
   const [isMinimized, setIsMinimized] = useState(getInitialMinimized);
 
   const target = useMemo(() => {
@@ -70,11 +69,6 @@ function CriticalAlertModal({ items, onConfirm, onOpenSale }) {
     return () => clearInterval(interval);
   }, [items]);
 
-  useEffect(() => {
-    if (!target) return;
-    setSoldQty(1);
-  }, [target]);
-
   const toggleMinimized = () => {
     const next = !isMinimized;
     setIsMinimized(next);
@@ -82,8 +76,6 @@ function CriticalAlertModal({ items, onConfirm, onOpenSale }) {
   };
 
   if (!target) return null;
-
-  const max = target.quantidadeRestante;
 
   if (isMinimized) {
     return (
@@ -130,26 +122,12 @@ function CriticalAlertModal({ items, onConfirm, onOpenSale }) {
           Vence em {target.daysLeft} dia(s) - {formatDateBR(target.validade)} - Restante: {target.quantidadeRestante}
         </p>
 
-        <div className="mt-2 grid grid-cols-[1fr_auto_auto] gap-2">
-          <input
-            type="number"
-            min="1"
-            max={max}
-            value={soldQty}
-            onChange={(event) => setSoldQty(Number(event.target.value))}
-            className="w-full rounded-xl border border-rose-200/60 bg-white/95 px-3 py-2 text-sm font-bold text-rose-900"
-          />
+        <div className="mt-2">
           <button
             onClick={() => onOpenSale(target)}
-            className="rounded-xl bg-black/25 px-3 py-2 text-xs font-bold"
+            className="w-full rounded-xl bg-black/25 px-3 py-2 text-xs font-bold"
           >
             Abrir
-          </button>
-          <button
-            onClick={() => onConfirm(target.id, Math.min(max, Math.max(1, Number(soldQty) || 1)))}
-            className="rounded-xl bg-white px-3 py-2 text-xs font-black text-rose-700"
-          >
-            Vender
           </button>
         </div>
       </div>

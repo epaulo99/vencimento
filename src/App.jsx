@@ -124,7 +124,7 @@ function App() {
 
       <SaleModal item={saleTarget} onClose={() => setSaleTarget(null)} onConfirm={handleSell} />
 
-      <CriticalAlertModal items={criticals} onConfirm={handleSell} onOpenSale={openSaleModal} />
+      <CriticalAlertModal items={criticals} onOpenSale={openSaleModal} />
     </div>
   );
 }
