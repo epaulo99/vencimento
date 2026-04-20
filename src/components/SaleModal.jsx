@@ -1,17 +1,19 @@
 import { useEffect, useState } from 'react';
 
 function SaleModal({ item, onClose, onConfirm }) {
-  const [qty, setQty] = useState(1);
+  const [qty, setQty] = useState('');
 
   useEffect(() => {
     if (!item) return;
-    setQty(1);
+    setQty('');
   }, [item?.id, item?.quantidadeRestante]);
 
   if (!item) return null;
 
   const max = item.quantidadeRestante;
-  const safeQty = Math.min(max, Math.max(1, Number(qty) || 1));
+  const numericQty = Number(qty);
+  const safeQty = Math.min(max, Math.max(1, Number.isFinite(numericQty) ? numericQty : 0));
+  const canConfirm = Number.isFinite(numericQty) && numericQty >= 1;
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4">
@@ -26,12 +28,19 @@ function SaleModal({ item, onClose, onConfirm }) {
             type="number"
             min="1"
             max={max}
-            value={safeQty}
+            value={qty}
+            placeholder="0"
             onChange={(event) => {
-              const next = Number(event.target.value);
-              setQty(Math.min(max, Math.max(1, Number.isFinite(next) ? next : 1)));
+              const nextValue = event.target.value;
+              if (nextValue === '') {
+                setQty('');
+                return;
+              }
+
+              const next = Number(nextValue);
+              setQty(String(Math.min(max, Math.max(0, Number.isFinite(next) ? next : 0))));
             }}
-            className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-xl font-black"
+            className="w-full rounded-2xl border border-slate-200 bg-slate-100 px-4 py-3 text-xl font-black placeholder:text-slate-400"
           />
         </label>
 
@@ -40,8 +49,10 @@ function SaleModal({ item, onClose, onConfirm }) {
             Cancelar
           </button>
           <button
+            type="button"
+            disabled={!canConfirm}
             onClick={() => onConfirm(item.id, safeQty)}
-            className="rounded-2xl bg-emerald-500 px-4 py-3 font-black text-slate-900"
+            className="rounded-2xl bg-emerald-500 px-4 py-3 font-black text-slate-900 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
           >
             Confirmar
           </button>
